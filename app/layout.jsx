@@ -1,6 +1,6 @@
 import './globals.css';
 
-const SITE_URL = 'https://kusayakyu-navi.com/profit-lens/';
+const SITE_URL = 'https://getprofitlens.netlify.app/';
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
