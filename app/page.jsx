@@ -104,9 +104,11 @@ export default function Landing() {
               {isCheckoutConfigured() ? (
                 <a className="btn" href={STRIPE.PAYMENT_LINK_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center' }}>{t('buy')}</a>
               ) : (
-                <Link className="btn" href="/dashboard" style={{ display: 'block', textAlign: 'center' }}>{t('buy')}</Link>
+                <>
+                  <Link className="btn" href="/dashboard" style={{ display: 'block', textAlign: 'center' }}>{t('buy')}</Link>
+                  <p className="note" style={{ marginTop: 10 }}>{t('buy_note')}</p>
+                </>
               )}
-              <p className="note" style={{ marginTop: 10 }}>{t('buy_note')}</p>
             </div>
           </div>
         </section>
