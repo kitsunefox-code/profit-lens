@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLang } from '../lib/i18n';
+import { LEMONSQUEEZY, isCheckoutConfigured } from '../lib/config';
 
 function DemoPreview({ t }) {
   const rows = [
@@ -100,7 +101,11 @@ export default function Landing() {
               <ul>
                 <li>{t('pro_f1')}</li><li>{t('pro_f2')}</li><li>{t('pro_f3')}</li><li>{t('pro_f4')}</li><li>{t('pro_f5')}</li>
               </ul>
-              <Link className="btn" href="/dashboard" style={{ width: '100%', textAlign: 'center' }}>{t('buy')}</Link>
+              {isCheckoutConfigured() ? (
+                <a className="btn" href={LEMONSQUEEZY.CHECKOUT_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center' }}>{t('buy')}</a>
+              ) : (
+                <Link className="btn" href="/dashboard" style={{ display: 'block', textAlign: 'center' }}>{t('buy')}</Link>
+              )}
               <p className="note" style={{ marginTop: 10 }}>{t('buy_note')}</p>
             </div>
           </div>

@@ -5,11 +5,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '../../lib/i18n';
 import {
   FREE_TX_LIMIT, MARKETS,
-  loadTx, saveTx, loadSettings, saveSettings, loadLicense, saveLicense, isValidLicense,
+  loadTx, saveTx, loadSettings, saveSettings,
   txFee, txProfit, monthlySummary, productSummary, fmt, pct,
   parseCsv, guessMapping, normalizeDate, toNumber, exportCsv, download, uid,
   buildAiPrompt,
 } from '../../lib/store';
+import { LEMONSQUEEZY, isCheckoutConfigured } from '../../lib/config';
+import { activate as activateKey, isProStored, storedKey, clearPro } from '../../lib/license';
 
 const EMPTY_FORM = { date: '', name: '', qty: 1, sale: '', cost: '', fee: '', shipping: '', market: 'mercari' };
 
@@ -47,9 +49,10 @@ export default function Dashboard() {
   const { lang, toggle, t } = useLang();
   const [txs, setTxs] = useState([]);
   const [settings, setSettings] = useState({ currency: '¥', rates: {} });
-  const [license, setLicense] = useState('');
+  const [isPro, setIsPro] = useState(false);
   const [licenseInput, setLicenseInput] = useState('');
   const [licenseMsg, setLicenseMsg] = useState('');
+  const [activating, setActivating] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [csvState, setCsvState] = useState(null); // {headers, rows, map}
   const [toast, setToast] = useState('');
@@ -60,14 +63,15 @@ export default function Dashboard() {
   useEffect(() => {
     setTxs(loadTx());
     setSettings(loadSettings());
-    setLicense(loadLicense());
+    setIsPro(isProStored());
+    setLicenseInput(storedKey());
     const today = new Date();
     setForm((f) => ({ ...f, date: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}` }));
     setReady(true);
   }, []);
 
-  const isPro = isValidLicense(license);
   const capReached = !isPro && txs.length >= FREE_TX_LIMIT;
+  const checkoutHref = isCheckoutConfigured() ? LEMONSQUEEZY.CHECKOUT_URL : '/#pricing';
 
   const months = useMemo(() => monthlySummary(txs, settings), [txs, settings]);
   const products = useMemo(() => productSummary(txs, settings), [txs, settings]);
@@ -133,10 +137,21 @@ export default function Dashboard() {
     flash(`${Math.min(added.length, next.length - txs.length)} ${t('imported')}`);
   }
 
-  function activate() {
+  async function activate() {
     const k = licenseInput.trim();
-    if (isValidLicense(k)) { saveLicense(k); setLicense(k); setLicenseMsg(''); }
-    else setLicenseMsg(t('invalid_key'));
+    if (!k) return;
+    setActivating(true);
+    setLicenseMsg('');
+    const res = await activateKey(k);
+    setActivating(false);
+    if (res.ok) { setIsPro(true); setLicenseMsg(''); flash('✓'); }
+    else setLicenseMsg(res.message === 'network' ? t('license_network') : t('invalid_key'));
+  }
+
+  function deactivate() {
+    clearPro();
+    setIsPro(false);
+    setLicenseInput('');
   }
 
   function backup() {
@@ -188,7 +203,7 @@ export default function Dashboard() {
       </div>
 
       {capReached && (
-        <div className="warn">{t('free_cap_note')} <a href="/#pricing">{t('upgrade')} →</a></div>
+        <div className="warn">{t('free_cap_note')} <a href={checkoutHref} target={isCheckoutConfigured() ? '_blank' : undefined} rel="noopener noreferrer">{t('upgrade')} →</a></div>
       )}
 
       <div className="kpis">
@@ -267,7 +282,7 @@ export default function Dashboard() {
       <div className="panel">
         <div className="panel-head">
           <h2>{t('products')} {!isPro && products.length > 3 ? <span className="pill gold">{t('top_products')}</span> : null}</h2>
-          {!isPro && <a className="btn small gold" href="/#pricing">{t('upgrade')}</a>}
+          {!isPro && <a className="btn small gold" href={checkoutHref} target={isCheckoutConfigured() ? '_blank' : undefined} rel="noopener noreferrer">{t('upgrade')}</a>}
         </div>
         {products.length === 0 ? <p className="note">{t('empty')}</p> : (
           <div className="scroll-x">
@@ -334,7 +349,7 @@ export default function Dashboard() {
       <div className="panel">
         <div className="panel-head">
           <h2>{t('ai_title')} <span className="pill gold">Pro</span></h2>
-          {!isPro && <a className="btn small gold" href="/#pricing">{t('upgrade')}</a>}
+          {!isPro && <a className="btn small gold" href={checkoutHref} target={isCheckoutConfigured() ? '_blank' : undefined} rel="noopener noreferrer">{t('upgrade')}</a>}
         </div>
         <p className="note" style={{ marginBottom: 12 }}>{t('ai_desc')}</p>
         <div className="toolbar">
@@ -378,16 +393,28 @@ export default function Dashboard() {
         <h2 style={{ marginTop: 8 }}>{t('pro_title')}</h2>
         <p className="note" style={{ marginBottom: 8 }}>{t('pro_desc')}</p>
         {isPro ? (
-          <span className="pill gold">★ {t('activated')}</span>
-        ) : (
           <div className="toolbar">
-            <input
-              style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontSize: 14, minWidth: 220 }}
-              placeholder={t('license_ph')} value={licenseInput} onChange={(e) => setLicenseInput(e.target.value)}
-            />
-            <button className="btn small" onClick={activate}>{t('activate')}</button>
-            {licenseMsg && <span className="note" style={{ color: 'var(--red)', alignSelf: 'center' }}>{licenseMsg}</span>}
+            <span className="pill gold" style={{ alignSelf: 'center' }}>★ {t('activated')}</span>
+            <button className="btn small ghost" onClick={deactivate}>{t('deactivate')}</button>
           </div>
+        ) : (
+          <>
+            {isCheckoutConfigured() && (
+              <p style={{ marginBottom: 10 }}>
+                <a className="btn small gold" href={LEMONSQUEEZY.CHECKOUT_URL} target="_blank" rel="noopener noreferrer">{t('buy')} →</a>
+                <span className="note" style={{ marginLeft: 10 }}>{t('after_purchase')}</span>
+              </p>
+            )}
+            <div className="toolbar">
+              <input
+                style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontSize: 14, minWidth: 260 }}
+                placeholder={t('license_ph')} value={licenseInput} onChange={(e) => setLicenseInput(e.target.value)}
+              />
+              <button className="btn small" onClick={activate} disabled={activating}>{activating ? '…' : t('activate')}</button>
+              {licenseMsg && <span className="note" style={{ color: 'var(--red)', alignSelf: 'center' }}>{licenseMsg}</span>}
+            </div>
+            {!isCheckoutConfigured() && <p className="note" style={{ marginTop: 8 }}>{t('checkout_soon')}</p>}
+          </>
         )}
 
         {lang === 'ja' && (
