@@ -8,6 +8,7 @@ import {
   loadTx, saveTx, loadSettings, saveSettings, loadLicense, saveLicense, isValidLicense,
   txFee, txProfit, monthlySummary, productSummary, fmt, pct,
   parseCsv, guessMapping, normalizeDate, toNumber, exportCsv, download, uid,
+  buildAiPrompt,
 } from '../../lib/store';
 
 const EMPTY_FORM = { date: '', name: '', qty: 1, sale: '', cost: '', fee: '', shipping: '', market: 'mercari' };
@@ -328,6 +329,31 @@ export default function Dashboard() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2>{t('ai_title')} <span className="pill gold">Pro</span></h2>
+          {!isPro && <a className="btn small gold" href="/#pricing">{t('upgrade')}</a>}
+        </div>
+        <p className="note" style={{ marginBottom: 12 }}>{t('ai_desc')}</p>
+        <div className="toolbar">
+          {['review', 'loss', 'restock'].map((kind, i) => (
+            <button
+              key={kind}
+              className="btn small ghost"
+              onClick={() => {
+                if (!isPro) { flash(t('pro_only')); return; }
+                if (!months.length) { flash(t('ai_need_data')); return; }
+                navigator.clipboard.writeText(buildAiPrompt(kind, months, products, settings, lang));
+                flash(t('ai_copied'));
+              }}
+            >
+              {t(`ai_p${i + 1}`)}{!isPro ? ' ★' : ''}
+            </button>
+          ))}
+        </div>
+        {toast && <p className="note" style={{ marginTop: 10, color: 'var(--green)' }}>{toast}</p>}
       </div>
 
       <div className="panel">
