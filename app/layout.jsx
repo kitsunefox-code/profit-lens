@@ -1,4 +1,5 @@
 import './globals.css';
+import Analytics from '../components/Analytics';
 
 const SITE_URL = 'https://getprofitlens.netlify.app/';
 
@@ -27,7 +28,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <Analytics />
+        {children}
+      </body>
     </html>
   );
 }
