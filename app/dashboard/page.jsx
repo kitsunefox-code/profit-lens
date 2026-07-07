@@ -10,7 +10,7 @@ import {
   parseCsv, guessMapping, normalizeDate, toNumber, exportCsv, download, uid,
   buildAiPrompt,
 } from '../../lib/store';
-import { LEMONSQUEEZY, isCheckoutConfigured } from '../../lib/config';
+import { STRIPE, isCheckoutConfigured } from '../../lib/config';
 import { activate as activateKey, isProStored, storedKey, clearPro } from '../../lib/license';
 
 const EMPTY_FORM = { date: '', name: '', qty: 1, sale: '', cost: '', fee: '', shipping: '', market: 'mercari' };
@@ -71,7 +71,7 @@ export default function Dashboard() {
   }, []);
 
   const capReached = !isPro && txs.length >= FREE_TX_LIMIT;
-  const checkoutHref = isCheckoutConfigured() ? LEMONSQUEEZY.CHECKOUT_URL : '/#pricing';
+  const checkoutHref = isCheckoutConfigured() ? STRIPE.PAYMENT_LINK_URL : '/#pricing';
 
   const months = useMemo(() => monthlySummary(txs, settings), [txs, settings]);
   const products = useMemo(() => productSummary(txs, settings), [txs, settings]);
@@ -401,7 +401,7 @@ export default function Dashboard() {
           <>
             {isCheckoutConfigured() && (
               <p style={{ marginBottom: 10 }}>
-                <a className="btn small gold" href={LEMONSQUEEZY.CHECKOUT_URL} target="_blank" rel="noopener noreferrer">{t('buy')} →</a>
+                <a className="btn small gold" href={STRIPE.PAYMENT_LINK_URL} target="_blank" rel="noopener noreferrer">{t('buy')} →</a>
                 <span className="note" style={{ marginLeft: 10 }}>{t('after_purchase')}</span>
               </p>
             )}
